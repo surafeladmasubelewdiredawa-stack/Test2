@@ -410,10 +410,11 @@
 
         function fbRef(path) { return fbReady ? fb.ref(fb.db, path) : null; }
 
-        let localVersion = parseInt(localStorage.getItem('att_v') || '0');
+        // FIX: Updated LocalStorage Keys to prevent cross-app data sharing
+        let localVersion = parseInt(localStorage.getItem('att_v_friday') || '0');
         function bumpVersion() {
-            localVersion = parseInt(localStorage.getItem('att_v') || '0') + 1;
-            localStorage.setItem('att_v', String(localVersion));
+            localVersion = parseInt(localStorage.getItem('att_v_friday') || '0') + 1;
+            localStorage.setItem('att_v_friday', String(localVersion));
         }
 
         const syncBadge = document.getElementById('sync-badge');
@@ -615,10 +616,10 @@
             for (let i = 0; i < 20; i++) r += chars[c[i] % chars.length]; return r;
         }
 
-        function saveCountdownEnd(end) { localStorage.setItem('countdownEndTime', end); }
-        function clearCountdownEnd() { localStorage.removeItem('countdownEndTime'); }
+        function saveCountdownEnd(end) { localStorage.setItem('countdownEndTime_friday', end); }
+        function clearCountdownEnd() { localStorage.removeItem('countdownEndTime_friday'); }
         function getRemaining() {
-            const e = localStorage.getItem('countdownEndTime');
+            const e = localStorage.getItem('countdownEndTime_friday');
             if (!e) return 0;
             const d = Math.floor((parseInt(e) - Date.now()) / 1000); return d > 0 ? d : 0;
         }
@@ -659,11 +660,11 @@
         }
         function saveAttState() {
             if (isAttendanceOpen && currentAttendanceMark)
-                localStorage.setItem('attendanceState', JSON.stringify({ isOpen: true, currentMark: currentAttendanceMark, markedSet: Array.from(markedThisMark) }));
+                localStorage.setItem('attendanceState_friday', JSON.stringify({ isOpen: true, currentMark: currentAttendanceMark, markedSet: Array.from(markedThisMark) }));
         }
         function loadFromLocalStorage() {
             try {
-                const saved = JSON.parse(localStorage.getItem('attendance_students') || '{}');
+                const saved = JSON.parse(localStorage.getItem('attendance_students_friday') || '{}');
                 if (Object.keys(saved).length > 0) populateTable(saved); else tableBody.innerHTML = '';
             } catch(e) { tableBody.innerHTML = ''; }
         }
@@ -680,9 +681,9 @@
                 const clean = {};
                 for (const [k, v] of Object.entries(data)) { if (v !== null) clean[k] = v; }
                 populateTable(clean);
-                localStorage.setItem('attendance_students', JSON.stringify(clean));
-                localVersion = fbV; localStorage.setItem('att_v', String(fbV));
-                localStorage.setItem('attendance_deleted', '[]');
+                localStorage.setItem('attendance_students_friday', JSON.stringify(clean));
+                localVersion = fbV; localStorage.setItem('att_v_friday', String(fbV));
+                localStorage.setItem('attendance_deleted_friday', '[]');
             }, (err) => { console.error("Firebase read error:", err); });
         }
 
@@ -691,13 +692,13 @@
             const data = {};
             rows.forEach(r => { const k = r.dataset.id; if (k) data[k] = buildStudentObj(r); });
             bumpVersion();
-            localStorage.setItem('attendance_students', JSON.stringify(data));
+            localStorage.setItem('attendance_students_friday', JSON.stringify(data));
             saveAttState();
             if (navigator.onLine && fbReady) {
                 const pushData = { ...data, _v: localVersion };
-                const deletedKeys = JSON.parse(localStorage.getItem('attendance_deleted') || '[]');
+                const deletedKeys = JSON.parse(localStorage.getItem('attendance_deleted_friday') || '[]');
                 deletedKeys.forEach(k => { pushData[k] = null; });
-                fb.update(fb.recordsRef, pushData).then(() => { localStorage.setItem('attendance_deleted', '[]'); }).catch(err => console.error("Firebase save error:", err));
+                fb.update(fb.recordsRef, pushData).then(() => { localStorage.setItem('attendance_deleted_friday', '[]'); }).catch(err => console.error("Firebase save error:", err));
             }
         }
 
@@ -712,16 +713,16 @@
                     const clean = {};
                     for (const [k, v] of Object.entries(fbData)) { if (v !== null) clean[k] = v; }
                     populateTable(clean);
-                    localStorage.setItem('attendance_students', JSON.stringify(clean));
-                    localVersion = fbV; localStorage.setItem('att_v', String(fbV));
-                    localStorage.setItem('attendance_deleted', '[]');
+                    localStorage.setItem('attendance_students_friday', JSON.stringify(clean));
+                    localVersion = fbV; localStorage.setItem('att_v_friday', String(fbV));
+                    localStorage.setItem('attendance_deleted_friday', '[]');
                 } else if (localVersion > fbV) {
-                    const localData = JSON.parse(localStorage.getItem('attendance_students') || '{}');
+                    const localData = JSON.parse(localStorage.getItem('attendance_students_friday') || '{}');
                     const pushData = { ...localData, _v: localVersion };
-                    const deletedKeys = JSON.parse(localStorage.getItem('attendance_deleted') || '[]');
+                    const deletedKeys = JSON.parse(localStorage.getItem('attendance_deleted_friday') || '[]');
                     deletedKeys.forEach(k => { pushData[k] = null; });
                     await fb.update(fb.recordsRef, pushData);
-                    localStorage.setItem('attendance_deleted', '[]');
+                    localStorage.setItem('attendance_deleted_friday', '[]');
                 }
                 await syncHistoryToFirebase();
                 await syncPendingHistoryDeletions();
@@ -731,7 +732,7 @@
 
         async function syncHistoryToFirebase() {
             if (!fbReady || !navigator.onLine) return;
-            let pending = JSON.parse(localStorage.getItem('attendance_pending_history') || '[]');
+            let pending = JSON.parse(localStorage.getItem('attendance_pending_history_friday') || '[]');
             const seen = new Set();
             pending = pending.filter(p => {
                 if (seen.has(p.id)) return false;
@@ -751,7 +752,7 @@
                     });
                     await Promise.all(syncPromises);
                     const remaining = pending.filter(p => !syncedIds.includes(p.id));
-                    localStorage.setItem('attendance_pending_history', JSON.stringify(remaining));
+                    localStorage.setItem('attendance_pending_history_friday', JSON.stringify(remaining));
                 } catch (e) {
                     console.error("Batch sync error", e);
                 }
@@ -759,7 +760,7 @@
         }
         function loadHistoryFromLocalStorage() {
             try {
-                let arr = JSON.parse(localStorage.getItem('attendance_history') || '[]');
+                let arr = JSON.parse(localStorage.getItem('attendance_history_friday') || '[]');
                 const cleanArr = [];
                 const seen = new Set();
                 arr.forEach(h => {
@@ -771,7 +772,7 @@
                 });
                 if (cleanArr.length !== arr.length) {
                     arr = cleanArr;
-                    localStorage.setItem('attendance_history', JSON.stringify(arr));
+                    localStorage.setItem('attendance_history_friday', JSON.stringify(arr));
                 }
                 if (arr.length > 0) { const data = {}; arr.forEach(h => { data[h.firebaseKey] = h; }); renderHistory(data); }
                 else renderHistory({});
@@ -786,21 +787,21 @@
                 renderHistory(data);
                 const arr = [];
                 for (const [k, v] of Object.entries(data)) { if (v !== null) arr.push({ firebaseKey: k, ...v }); }
-                localStorage.setItem('attendance_history', JSON.stringify(arr));
+                localStorage.setItem('attendance_history_friday', JSON.stringify(arr));
             }, (err) => { console.error("Firebase history error:", err); });
         }
         function queueHistoryDeletion(id) {
-            let pending = JSON.parse(localStorage.getItem('att_pending_hist_del') || '[]');
+            let pending = JSON.parse(localStorage.getItem('att_pending_hist_del_friday') || '[]');
             if (!pending.includes(id)) pending.push(id);
-            localStorage.setItem('att_pending_hist_del', JSON.stringify(pending));
+            localStorage.setItem('att_pending_hist_del_friday', JSON.stringify(pending));
         }
         async function syncPendingHistoryDeletions() {
             if (!fbReady || !navigator.onLine) return;
-            const pending = JSON.parse(localStorage.getItem('att_pending_hist_del') || '[]');
+            const pending = JSON.parse(localStorage.getItem('att_pending_hist_del_friday') || '[]');
             if (!pending.length) return;
             let synced = 0;
             for (const id of pending) { try { await fb.remove(fbRef(`history/${id}`)); synced++; } catch(e) {} }
-            if (synced > 0) localStorage.setItem('att_pending_hist_del', '[]');
+            if (synced > 0) localStorage.setItem('att_pending_hist_del_friday', '[]');
         }
         function renderHistory(data) {
             historyListContainer.innerHTML = '';
@@ -847,9 +848,9 @@
                 historyDeleteModal.style.display = 'none';
                 if (isClearAllMode) {
                     isClearAllMode = false;
-                    localStorage.setItem('attendance_history', '[]');
-                    localStorage.setItem('attendance_pending_history', '[]');
-                    localStorage.setItem('att_pending_hist_del', '[]');
+                    localStorage.setItem('attendance_history_friday', '[]');
+                    localStorage.setItem('attendance_pending_history_friday', '[]');
+                    localStorage.setItem('att_pending_hist_del_friday', '[]');
                     if (navigator.onLine && fbReady) {
                         try { await fb.remove(fb.historyRef); }
                         catch(e) { console.error("Firebase clear error:", e); }
@@ -860,9 +861,9 @@
                     if (navigator.onLine && fbReady) {
                         try { await fb.remove(fbRef(`history/${pendingDeleteHistoryId}`)); showToast("History deleted"); } catch(e) { showToast("Error deleting"); }
                     } else {
-                        let hist = JSON.parse(localStorage.getItem('attendance_history') || '[]');
+                        let hist = JSON.parse(localStorage.getItem('attendance_history_friday') || '[]');
                         hist = hist.filter(h => h.firebaseKey !== pendingDeleteHistoryId);
-                        localStorage.setItem('attendance_history', JSON.stringify(hist));
+                        localStorage.setItem('attendance_history_friday', JSON.stringify(hist));
                         queueHistoryDeletion(pendingDeleteHistoryId);
                         renderHistory({}); loadHistoryFromLocalStorage(); showToast("Queued for sync");
                     }
@@ -910,7 +911,7 @@
                     data: arr 
                 };
                 const localKey = 'local_' + entryId;
-                let hist = JSON.parse(localStorage.getItem('attendance_history') || '[]');
+                let hist = JSON.parse(localStorage.getItem('attendance_history_friday') || '[]');
                 if (hist.some(h => h.firebaseKey === localKey)) {
                     showToast("Already moved recently!");
                     return;
@@ -919,16 +920,16 @@
                     showToast("Already in history.");
                     return;
                 }
-                let pending = JSON.parse(localStorage.getItem('attendance_pending_history') || '[]');
+                let pending = JSON.parse(localStorage.getItem('attendance_pending_history_friday') || '[]');
                 if (pending.some(p => p.id === entryId)) {
                     showToast("Already in queue.");
                     return;
                 }
                 hist.push({ firebaseKey: localKey, ...entry });
-                localStorage.setItem('attendance_history', JSON.stringify(hist));
+                localStorage.setItem('attendance_history_friday', JSON.stringify(hist));
                 pending = [...new Set(pending.map(p => p.id))].map(id => pending.find(p => p.id === id));
                 pending.push(entry); 
-                localStorage.setItem('attendance_pending_history', JSON.stringify(pending));
+                localStorage.setItem('attendance_pending_history_friday', JSON.stringify(pending));
                 showToast("Archiving...");
                 if (navigator.onLine && fbReady) {
                     try { await fb.push(fb.historyRef, entry); showToast("Moved to History!"); }
@@ -959,9 +960,9 @@
             afterConfirmAction = () => {
                 const deletedKey = selectedDetailRow.dataset.id;
                 selectedDetailRow.remove(); sortTableAndNumbers();
-                let deletedKeys = JSON.parse(localStorage.getItem('attendance_deleted') || '[]');
+                let deletedKeys = JSON.parse(localStorage.getItem('attendance_deleted_friday') || '[]');
                 if (deletedKey && !deletedKeys.includes(deletedKey)) deletedKeys.push(deletedKey);
-                localStorage.setItem('attendance_deleted', JSON.stringify(deletedKeys));
+                localStorage.setItem('attendance_deleted_friday', JSON.stringify(deletedKeys));
                 saveData(); showToast("Student deleted"); selectedDetailRow = null;
             };
         });
@@ -1268,7 +1269,7 @@
             }
         }
 
-        const RECENT_T = 'recentDocTitles', RECENT_F = 'recentDocFiles';
+        const RECENT_T = 'recentDocTitles_friday', RECENT_F = 'recentDocFiles_friday';
         function getRecent(k) { return JSON.parse(localStorage.getItem(k) || '[]'); }
         function saveRecent(k, v) { let l = getRecent(k); l = l.filter(i => i !== v); l.unshift(v); if (l.length > 5) l.pop(); localStorage.setItem(k, JSON.stringify(l)); }
         function setupAuto(input, dropId, storageKey) {
@@ -1452,13 +1453,13 @@
 
         if ('serviceWorker' in navigator) {
             const urls = ['./','https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css','https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js','https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'];
-            const sw = 'const CN="AttendanceApp_v8",U=' + JSON.stringify(urls) + ';self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CN).then(c=>c.addAll(U)))});self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CN).map(x=>caches.delete(x)))))});self.addEventListener("fetch",e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(f=>caches.open(CN).then(c=>{c.put(e.request,f.clone());return f}))).catch(()=>caches.match("./")))});';
+            const sw = 'const CN="AttendanceApp_v8_Friday",U=' + JSON.stringify(urls) + ';self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CN).then(c=>c.addAll(U)))});self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CN).map(x=>caches.delete(x)))))});self.addEventListener("fetch",e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(f=>caches.open(CN).then(c=>{c.put(e.request,f.clone());return f}))).catch(()=>caches.match("./")))});';
             navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).catch(()=>{});
         }
 
         window.addEventListener('load', async () => {
             const rem = getRemaining();
-            const st = JSON.parse(localStorage.getItem('attendanceState') || 'null');
+            const st = JSON.parse(localStorage.getItem('attendanceState_friday') || 'null');
             if (rem > 0 && st && st.isOpen) {
                 isAttendanceOpen = false; currentAttendanceMark = st.currentMark;
                 markedThisMark = new Set(st.markedSet || []);
@@ -1466,7 +1467,7 @@
             } else if (rem <= 0 && st && st.isOpen) {
                 currentAttendanceMark = st.currentMark; markedThisMark = new Set(st.markedSet || []);
                 markAbsentAfterTimeout(); clearCountdownEnd();
-                localStorage.setItem('attendanceState', JSON.stringify({ ...st, isOpen: false }));
+                localStorage.setItem('attendanceState_friday', JSON.stringify({ ...st, isOpen: false }));
             }
         });
 
@@ -1494,7 +1495,7 @@
             if (loaded) {
                 fb.onAuth(fb.auth, async user => {
                     if (user) {
-                        localStorage.setItem('offline_auth', '1');
+                        localStorage.setItem('offline_auth_friday', '1');
                         appLockModal.style.display = 'none'; logoutBtn.style.display = 'flex';
                         if (navigator.onLine) { await syncLocalToCloud(); loadFirebaseData(); loadHistoryFromFirebase(); }
                     } else {
@@ -1506,16 +1507,16 @@
                 lockInput.addEventListener('keyup', e => { if (e.key === 'Enter') lockBtn.click(); });
                 logoutBtn.addEventListener('click', async () => { await fb.signOut(fb.auth); });
             } else {
-                const wasAuth = localStorage.getItem('offline_auth');
+                const wasAuth = localStorage.getItem('offline_auth_friday');
                 if (wasAuth) { appLockModal.style.display = 'none'; logoutBtn.style.display = 'flex'; }
                 else { appLockModal.style.display = 'flex'; lockInput.focus(); }
                 lockBtn.addEventListener('click', () => {
-                    if (lockInput.value === 'Debebe!') { localStorage.setItem('offline_auth', '1'); appLockModal.style.display = 'none'; logoutBtn.style.display = 'flex'; }
+                    if (lockInput.value === 'Debebe!') { localStorage.setItem('offline_auth_friday', '1'); appLockModal.style.display = 'none'; logoutBtn.style.display = 'flex'; }
                     else { lockError.style.display = 'block'; lockInput.value = ''; lockInput.focus(); }
                 });
                 lockInput.addEventListener('keyup', e => { if (e.key === 'Enter') lockBtn.click(); });
                 logoutBtn.addEventListener('click', () => {
-                    localStorage.removeItem('offline_auth'); appLockModal.style.display = 'flex';
+                    localStorage.removeItem('offline_auth_friday'); appLockModal.style.display = 'flex';
                     logoutBtn.style.display = 'none'; lockInput.value = ''; lockError.style.display = 'none'; lockInput.focus();
                 });
             }
